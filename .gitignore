@@ -1,0 +1,11 @@
+# Secrets. If .env ever shows up in `git status`, stop and fix this first.
+.env
+
+# Environment and caches
+.venv/
+__pycache__/
+*.pyc
+.cache/
+
+# NOTE: soil_snapshot.json is intentionally NOT ignored. It is committed
+# as the offline fallback for the soil tool (public CC-BY 4.0 data only).

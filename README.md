@@ -1,0 +1,71 @@
+# Agentic AI: Foundations and Applications (04-801)
+
+Course repository for the Fall 2026 Mini-2 at Carnegie Mellon University Africa, Kigali. Instructor: Prof. Dr. Bernhard Ostheimer.
+
+This repo contains the reference implementations for every lab from Week 0 through Week 5, plus the consolidated tool kit your capstone team will build on. Every script here has been run end to end against the live APIs. The example outputs in the lab script are real runs, not staged ones, including the failures. Especially the failures.
+
+## Quick start (Windows, PowerShell)
+
+The course is validated on Windows 11. macOS and Linux notes will follow.
+
+```powershell
+git clone <REPO-URL>
+cd agentic-ai-04-801-f26
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+# Now edit .env and add your own keys (see below), then:
+python hello_llm.py
+```
+
+If `hello_llm.py` prints a model response, your stack works. If not, see the troubleshooting table in the Week 0 chapter of the lab script before asking anyone. That table exists because we hit every one of those errors ourselves.
+
+**Cursor and VS Code users, one critical check:** make sure the Python interpreter is set to `.venv`, not your global Python. A script that "happens to work" on the wrong interpreter is a time bomb. This is documented in the lab script for a reason: it happened to your instructor.
+
+## Credentials
+
+Two services, both free:
+
+1. **OpenRouter** (LLM access): create a key at `https://openrouter.ai/keys` and set a spending limit on it. A few dollars covers the whole course; a single pipeline run costs a fraction of a cent.
+2. **iSDAsoil** (soil data): register at `https://isda-africa.com/api/registration` and read the Terms of Use. Data is CC-BY 4.0. The API uses a Bearer token that expires after 60 minutes, which is not an inconvenience but a Week 3 learning objective.
+
+Both go into `.env`, which is gitignored. Keys never appear in code, in commits, in screenshots, or in chat messages. The Week 0 lab includes a Leak Drill so that this reflex is trained, not just stated.
+
+## Map of the repo
+
+| Week | File(s) | What it teaches |
+|---|---|---|
+| 0 | `hello_llm.py` | Environment smoke test: venv, `.env`, OpenRouter |
+| 1 | `first_agent.py` | Your first tool-using agent, raw SDK loop, NASA POWER |
+| 2 | `react_agent.py` | ReAct from scratch: stop tokens, parsing, budget guard |
+| 3 | `soil_tool.py` | Anatomy of a robust tool: auth, timeouts, snapshot fallback |
+| 3 | `langchain_agent.py` | Same tools, framework loop: what changes and what must not |
+| 3 | `field_notes_tool.py` | Retrieval is just another tool (Chroma, in-memory) |
+| 4 | `multi_agent.py` | Data, Analysis, Report: role separation enforced by tool access |
+| 5 | `eval_harness.py` | Three-layer evals: hard checks, repetition, LLM-as-judge |
+| Capstone | `tools.py` | The four course tools, consolidated: `weather`, `soil`, `calc`, `search_notes` |
+| Utility | `build_snapshot.py` | Instructor tool that pre-warms the offline soil snapshot |
+
+The scripts are laid out flat, not in week folders, so that they match the lab script line by line and can import each other (`multi_agent.py` and `eval_harness.py` reuse `soil_tool.py`). The authoritative walkthrough for every file is the lab script handed out in class.
+
+## The snapshot fallback
+
+`soil_snapshot.json` is committed on purpose. It is the offline fallback for the soil tool: if the live iSDAsoil call fails (timeout, expired token, no WiFi), the tool serves cached data and says so, loudly and honestly, in its output label. If neither the live call nor the snapshot works, the tool raises a plain-language error instead of inventing data. That design decision is the architectural answer to a failure mode you will meet, dissected, in the Week 2 and Week 5 autopsies.
+
+The snapshot contains only public CC-BY 4.0 soil data for the course reference points. It contains no credentials.
+
+## First run notes
+
+- Chroma downloads its embedding model (about 80 MB) on the first retrieval call and caches it locally. Do this once on a good connection, ideally in Week 0, not five minutes before a demo.
+- The version pins in `requirements.txt` are the exact versions of the instructor validation run. Agent frameworks move fast; mid-course upgrades are a class decision, not an individual one.
+
+## Data sources and attribution
+
+- **iSDAsoil**: Miller, M. A. E., Shepherd, K. D., Kisitu, B., & Collinson, J. (2021). iSDAsoil: The first continent-scale soil property map at 30 m resolution. *PLOS Biology*, 19(11), e3001441. https://doi.org/10.1371/journal.pbio.3001441. Data: CC-BY 4.0.
+- **NASA POWER**: Prediction Of Worldwide Energy Resources, NASA Langley Research Center. https://power.larc.nasa.gov. Open access, no key required.
+- Synthetic field notes in `field_notes_tool.py` and `tools.py` are course material, invented for teaching. Any resemblance to an actual armyworm is fully intended.
+
+## Course use
+
+Material for 04-801, Fall 2026, CMU-Africa. Data sources retain their own licenses (see above).
