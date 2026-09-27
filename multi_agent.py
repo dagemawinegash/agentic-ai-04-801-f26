@@ -18,6 +18,7 @@ load_dotenv()
 model = ChatOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ["OPENROUTER_API_KEY"],
+    max_tokens=1024,                            # some providers reject calls without a budget
     model="deepseek/deepseek-chat-v3-0324",
 )
 
@@ -33,14 +34,24 @@ def weather(latitude: float, longitude: float, start: str, end: str) -> str:
               "start": start, "end": end, "format": "JSON"}
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
-    return json.dumps(r.json()["properties"]["parameter"])
+    data = r.json()
+    label = f"\n[source: NASA POWER, {'/'.join(data['header']['sources'])}]"
+    return json.dumps(data["properties"]["parameter"]) + label
+
+SOIL_PROPS = ("ph", "carbon_organic", "nitrogen_total")   # what the snapshot covers
 
 @tool
 def soil(latitude: float, longitude: float, prop: str = "ph") -> str:
     """Topsoil property (0-20 cm) from iSDAsoil, with uncertainty intervals.
-    Falls back to a cached snapshot if the live API is down.
-    Useful properties: ph, carbon_organic, nitrogen_total."""
-    return get_soil(latitude, longitude, prop)
+    prop must be one of: ph, carbon_organic, nitrogen_total. No other
+    property exists in this tool; do not guess names."""
+    if prop not in SOIL_PROPS:
+        return (f"ERROR: unknown property '{prop}'. This tool offers only "
+                f"{', '.join(SOIL_PROPS)}. Tell the user the value is not available.")
+    try:
+        return get_soil(latitude, longitude, prop)
+    except RuntimeError as exc:
+        return f"ERROR: {exc}"        # loud at the tool, observable to the model, never fatal
 
 @tool
 def calc(expression: str) -> str:
@@ -59,7 +70,8 @@ data_agent = create_agent(
         "You are the DATA agent in a pipeline. Fetch what the task needs "
         "using your tools, then output a compact FACT SHEET: one line per "
         "fact, each with its source label and uncertainty COPIED VERBATIM "
-        "from the tool output (do not relabel or convert intervals). "
+        "from the tool output (do not relabel or convert intervals) "
+        "including every source label in square brackets in full. "
         "Do NOT analyse, interpret, or recommend. Facts only."),
 )
 
@@ -73,6 +85,9 @@ analysis_agent = create_agent(
         "You cannot fetch data. If a needed fact is absent, write exactly "
         "'MISSING DATA: <what>' instead of guessing. Use the calc tool for "
         "all arithmetic. Output numbered FINDINGS with uncertainty notes. "
+        "MISSING DATA refers to measurements that were not collected, "
+        "not to agronomic reference values; use standard agronomic knowledge "
+        "for thresholds and state it as such. "
         "IMPORTANT: your final message must restate ALL findings in full; "
         "partial output in earlier messages does not count. "
         "No prose report, no recommendations beyond the findings."),
@@ -84,7 +99,9 @@ REPORT_SYSTEM = (
     "You write a short field report for an agricultural extension officer. "
     "Five sentences maximum, plain language. Use ONLY the findings you are "
     "given: never introduce numbers or claims that are not in them. State "
-    "data sources and uncertainty in the final sentence.")
+    "data sources and uncertainty in the final sentence."
+    "Name every data source exactly as it appears in the findings "
+    "(for example NASA POWER, iSDAsoil); never describe a source in your own words.")
 
 # ---- The pipeline: plain function composition -------------------------------
 

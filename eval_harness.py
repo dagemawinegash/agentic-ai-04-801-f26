@@ -10,6 +10,11 @@ import json
 import os
 import re
 import requests
+from pathlib import Path
+
+# Golden data comes from the frozen snapshot, never from a live call (Autopsy 7).
+WEATHER = json.loads(Path("weather_snapshot.json").read_text())
+GOLDEN_RAIN = f"{WEATHER['kigali']['total_mm']:.2f}"          # "7.03"
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.tools import tool
@@ -22,6 +27,7 @@ load_dotenv()
 model = ChatOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ["OPENROUTER_API_KEY"],
+    max_tokens=1024,                            # some providers reject calls without a budget
     model="deepseek/deepseek-chat-v3-0324",
 )
 
@@ -29,19 +35,45 @@ model = ChatOpenAI(
 def weather(latitude: float, longitude: float, start: str, end: str) -> str:
     """Daily air temperature (deg C) and rainfall (mm) from NASA POWER.
     Dates as YYYYMMDD."""
+    if os.environ.get("EVAL_OFFLINE") == "1":      # run the harness against frozen data only
+        for entry in WEATHER.values():
+            if (isinstance(entry, dict)
+                    and entry.get("latitude") == latitude
+                    and entry.get("longitude") == longitude
+                    and entry.get("start") == start
+                    and entry.get("end") == end):
+                data = {"T2M": entry["T2M"], "PRECTOTCORR": entry["PRECTOTCORR"]}
+                return (json.dumps(data)
+                        + f"\n[source: FROZEN SNAPSHOT {WEATHER['frozen_on']}, "
+                          f"{'/'.join(entry['sources'])}]")
+        raise RuntimeError(
+            f"EVAL_OFFLINE=1 but no snapshot entry for {latitude},{longitude},"
+            f"{start}-{end}. An honest error beats invented data.")
     url = "https://power.larc.nasa.gov/api/temporal/daily/point"
     params = {"parameters": "T2M,PRECTOTCORR", "community": "ag",
               "latitude": latitude, "longitude": longitude,
               "start": start, "end": end, "format": "JSON"}
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
-    return json.dumps(r.json()["properties"]["parameter"])
+    data = r.json()
+    label = f"\n[source: NASA POWER, {'/'.join(data['header']['sources'])}]"
+    return json.dumps(data["properties"]["parameter"]) + label
+
+SOIL_PROPS = ("ph", "carbon_organic", "nitrogen_total")   # what the snapshot covers
 
 @tool
 def soil(latitude: float, longitude: float, prop: str = "ph") -> str:
-    """Topsoil property (0-20 cm) from iSDAsoil, with uncertainty intervals."""
-    return get_soil(latitude, longitude, prop)
-
+    """Topsoil property (0-20 cm) from iSDAsoil, with uncertainty intervals.
+    prop must be one of: ph, carbon_organic, nitrogen_total. No other
+    property exists in this tool; do not guess names."""
+    if prop not in SOIL_PROPS:
+        return (f"ERROR: unknown property '{prop}'. This tool offers only "
+                f"{', '.join(SOIL_PROPS)}. Tell the user the value is not available.")
+    try:
+        return get_soil(latitude, longitude, prop)
+    except RuntimeError as exc:
+        return f"ERROR: {exc}"        # loud at the tool, observable to the model, never fatal
+    
 agent = create_agent(
     model=model, tools=[weather, soil],
     system_prompt="You are an agronomy assistant. Use your tools; never "
@@ -75,7 +107,7 @@ SCENARIOS = [
         "question": "Total rainfall in mm at lat -1.94, lon 30.06 for "
                     "20260701 to 20260707? One sentence.",
         "checks": {
-            "contains_0.9":  lambda a: "0.9" in a,
+            "contains_7.03": lambda a: GOLDEN_RAIN in a,
             "cites_source":  lambda a: re.search(r"NASA|POWER", a, re.I),
         },
     },
@@ -85,7 +117,8 @@ SCENARIOS = [
                     "with uncertainty.",
         "checks": {
             "contains_6.7":  lambda a: "6.7" in a,
-            "has_interval":  lambda a: re.search(r"\d\.\d\s*(-|to|and)\s*\d\.\d", a),
+            "has_interval":  lambda a: re.search(
+                r"\d\.\d\s*([-\u2013\u2014]|to|and)\s*\d\.\d", a),
         },
     },
     {

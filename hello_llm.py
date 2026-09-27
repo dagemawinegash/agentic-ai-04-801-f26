@@ -15,6 +15,7 @@ client = OpenAI(
 
 response = client.chat.completions.create(
     model="deepseek/deepseek-chat-v3-0324",   # cheap and capable, our default for labs
+    max_tokens=1024,                            # some providers reject calls without a budget
     messages=[
         {"role": "user",
          "content": "In one sentence: what makes an AI system 'agentic'?"}

@@ -108,39 +108,42 @@ def check_verdict(text):
 
 # ---- 4. The loop: stop sequence, parser (Action first), budget guard, dispatch, validation
 
-messages = [{"role": "system", "content": SYSTEM},
-            {"role": "user", "content": QUESTION}]
+if __name__ == "__main__":                         # importing this module must not run the agent
+    messages = [{"role": "system", "content": SYSTEM},
+                {"role": "user", "content": QUESTION}]
 
-for step in range(6):                              # hard stop: no infinite loops
-    response = client.chat.completions.create(
-        model="deepseek/deepseek-chat-v3-0324",
-        messages=messages,
-        stop=["Observation:"],                     # the model must not dream one up
-    )
-    text = response.choices[0].message.content
-    print(text.strip(), "\n")
-    messages.append({"role": "assistant", "content": text})
+    for step in range(6):                          # hard stop: no infinite loops
+        response = client.chat.completions.create(
+            model="deepseek/deepseek-chat-v3-0324",
+            messages=messages,
+            max_tokens=1024,                        # some providers reject calls without a budget
+            stop=["Observation:"],                 # the model must not dream one up
+        )
+        text = response.choices[0].message.content
+        print(text.strip(), "\n")
+        messages.append({"role": "assistant", "content": text})
 
-    match = re.search(
-        r'Action:\s*(get_weather|rain_total)\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,'
-        r'\s*"?(\d{8})"?\s*,\s*"?(\d{8})"?\s*\)', text)
+        match = re.search(
+            r'Action:\s*(get_weather|rain_total)\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,'
+            r'\s*"?(\d{8})"?\s*,\s*"?(\d{8})"?\s*\)', text)
 
-    if match:                                      # an Action wins over anything after it
-        text = text[:match.end()]                  # the model wrote more? The code decides what counts
-        messages[-1] = {"role": "assistant", "content": text}
-        name, lat, lon, start, end = match.groups()
-        obs = TOOLS[name](float(lat), float(lon), start, end)
-        print(f"Observation: {obs[:120]}...\n")
-        messages.append({"role": "user", "content": f"Observation: {obs}"})
-        continue
+        if match:                                  # an Action wins over anything after it
+            text = text[:match.end()]              # the model wrote more? The code decides what counts
+            print(f"[parser] kept the first Action, discarded {len(messages[-1]['content']) - len(text)} characters the model wrote after it\n")
+            messages[-1] = {"role": "assistant", "content": text}
+            name, lat, lon, start, end = match.groups()
+            obs = TOOLS[name](float(lat), float(lon), start, end)
+            print(f"Observation: {obs[:120]}...\n")
+            messages.append({"role": "user", "content": f"Observation: {obs}"})
+            continue
 
-    if "Final Answer:" in text:                    # only a message without an Action may answer
-        try:
-            verdict = check_verdict(text)
-            print("VERDICT OK:", json.dumps(verdict, indent=2))
-        except (ValueError, KeyError, AttributeError, TypeError) as e:
-            print("!! Verdict rejected:", e)
+        if "Final Answer:" in text:                # only a message without an Action may answer
+            try:
+                verdict = check_verdict(text)
+                print("VERDICT OK:", json.dumps(verdict, indent=2))
+            except (ValueError, KeyError, AttributeError, TypeError) as e:
+                print("!! Verdict rejected:", e)
+            break
+
+        print("!! Could not parse an Action. This is the lesson.")
         break
-
-    print("!! Could not parse an Action. This is the lesson.")
-    break

@@ -59,6 +59,7 @@ for step in range(6):                              # hard stop: no infinite loop
     response = client.chat.completions.create(
         model="deepseek/deepseek-chat-v3-0324",
         messages=messages,
+        max_tokens=1024,                            # some providers reject calls without a budget
         stop=["Observation:"],                     # the model must not dream one up
     )
     text = response.choices[0].message.content
@@ -71,6 +72,7 @@ for step in range(6):                              # hard stop: no infinite loop
 
     if match:                                      # an Action wins over anything after it
         text = text[:match.end()]                  # the model wrote more? The code decides what counts
+        print(f"[parser] kept the first Action, discarded {len(messages[-1]['content']) - len(text)} characters the model wrote after it\n")
         messages[-1] = {"role": "assistant", "content": text}
         lat, lon, start, end = match.groups()
         obs = get_weather(float(lat), float(lon), start, end)

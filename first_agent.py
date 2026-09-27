@@ -28,8 +28,9 @@ def get_weather(latitude: float, longitude: float, start: str, end: str) -> str:
     }
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
-    return json.dumps(r.json()["properties"]["parameter"])
-
+    data = r.json()
+    label = f"\n[source: NASA POWER, {'/'.join(data['header']['sources'])}]"
+    return json.dumps(data["properties"]["parameter"]) + label
 # ---- 2. The contract: what the model is told about the tool -----------------
 
 TOOLS = [{
@@ -61,6 +62,7 @@ while True:
     response = client.chat.completions.create(
         model="deepseek/deepseek-chat-v3-0324",
         messages=messages,
+        max_tokens=1024,                            # some providers reject calls without a budget
         tools=TOOLS,
     )
     msg = response.choices[0].message

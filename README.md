@@ -60,6 +60,45 @@ The snapshot contains only public CC-BY 4.0 soil data for the course reference p
 - Chroma downloads its embedding model (about 80 MB) on the first retrieval call and caches it locally. Do this once on a good connection, ideally in Week 0, not five minutes before a demo.
 - The version pins in `requirements.txt` are the exact versions of the instructor validation run. Agent frameworks move fast; mid-course upgrades are a class decision, not an individual one.
 
+## Reference values (frozen 27 Sep 2026)
+
+The evaluation harness and the capstone rubric use golden values from the
+snapshot files in this repository, never from a live call. One of the two
+reasons was learned the hard way.
+
+| Point | Window | Value | Source |
+|---|---|---|---|
+| Kigali (-1.94, 30.06) | 1 to 7 Jul 2026 | 7.03 mm rain over 7 days | NASA POWER, MERRA2 |
+| Nairobi (-1.29, 36.82) | 1 to 7 Jul 2026 | 3.85 mm rain over 7 days | NASA POWER, MERRA2 |
+| Kigali (-1.94, 30.06) | topsoil 0 to 20 cm | pH 6.7 (90% CI 6.2 to 7.2) | iSDAsoil |
+
+The rainfall values were first pulled on 11 Aug 2026 and read 0.9 mm and
+5.76 mm. NASA POWER fills its most recent weeks with a provisional
+near-real-time product (GEOS-IT) and replaces them when the MERRA-2
+reanalysis catches up. By 27 Sep 2026 the same query returned the values
+above. Nothing was wrong with the API; our test was wrong to treat a live
+number as frozen. Every weather tool in this repository now appends the
+POWER source to its output, `weather_snapshot.json` is the only place a
+golden value may come from, and `EVAL_OFFLINE=1 python eval_harness.py`
+runs the harness against the snapshot alone. Regenerate the snapshot only
+on purpose, with a note in this table.
+
+## Model pin and provider variance
+
+`deepseek/deepseek-chat` is a moving alias; the course pins
+`deepseek/deepseek-chat-v3-0324` so that every laptop sees the same model.
+If the pinned model is deprecated, change one string in seven files, then
+re-run `eval_harness.py` before anything else.
+
+The model is served by several providers behind the OpenRouter gateway,
+and they behave differently. Measured on 27 Sep 2026: one provider
+rejects a request that carries no `max_tokens`; another ignores the
+`stop` sequence entirely (0 of 5 stops honoured), so the ReAct model
+wrote invented Observations and a Final Answer in a single message. Both
+are handled in code: every call sets `max_tokens=1024`, and the ReAct loop
+parses the first Action and discards everything after it. Providers are
+deliberately not pinned; the code has to survive all of them.
+
 ## Data sources and attribution
 
 - **iSDAsoil**: Miller, M. A. E., Shepherd, K. D., Kisitu, B., & Collinson, J. (2021). iSDAsoil: The first continent-scale soil property map at 30 m resolution. *PLOS Biology*, 19(11), e3001441. https://doi.org/10.1371/journal.pbio.3001441. Data: CC-BY 4.0.

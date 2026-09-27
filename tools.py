@@ -38,16 +38,25 @@ def weather(latitude: float, longitude: float, start: str, end: str) -> str:
               "start": start, "end": end, "format": "JSON"}
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
-    return json.dumps(r.json()["properties"]["parameter"])
-
+    data = r.json()
+    label = f"\n[source: NASA POWER, {'/'.join(data['header']['sources'])}]"
+    return json.dumps(data["properties"]["parameter"]) + label
 # ---- Tool 2: soil (iSDAsoil, Bearer token, snapshot fallback) ---------------
+
+SOIL_PROPS = ("ph", "carbon_organic", "nitrogen_total")   # what the snapshot covers
 
 @tool
 def soil(latitude: float, longitude: float, prop: str = "ph") -> str:
     """Topsoil property (0-20 cm) from iSDAsoil, with uncertainty intervals.
-    Falls back to a cached snapshot if the live API is down.
-    Useful properties: ph, carbon_organic, nitrogen_total."""
-    return get_soil(latitude, longitude, prop)
+    prop must be one of: ph, carbon_organic, nitrogen_total. No other
+    property exists in this tool; do not guess names."""
+    if prop not in SOIL_PROPS:
+        return (f"ERROR: unknown property '{prop}'. This tool offers only "
+                f"{', '.join(SOIL_PROPS)}. Tell the user the value is not available.")
+    try:
+        return get_soil(latitude, longitude, prop)
+    except RuntimeError as exc:
+        return f"ERROR: {exc}"        # loud at the tool, observable to the model, never fatal
 
 # ---- Tool 3: calc (because mental arithmetic is not a capability) -----------
 
