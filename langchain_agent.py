@@ -41,7 +41,7 @@ def soil(latitude: float, longitude: float, prop: str = "ph") -> str:
 model = ChatOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ["OPENROUTER_API_KEY"],
-    model="deepseek/deepseek-chat",
+    model="deepseek/deepseek-chat-v3-0324",
 )
 
 agent = create_agent(

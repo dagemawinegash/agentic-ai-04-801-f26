@@ -59,7 +59,7 @@ messages = [{"role": "user", "content":
 
 while True:
     response = client.chat.completions.create(
-        model="deepseek/deepseek-chat",
+        model="deepseek/deepseek-chat-v3-0324",
         messages=messages,
         tools=TOOLS,
     )

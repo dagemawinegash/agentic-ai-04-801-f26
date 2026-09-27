@@ -14,7 +14,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="deepseek/deepseek-chat",   # cheap and capable, our default for labs
+    model="deepseek/deepseek-chat-v3-0324",   # cheap and capable, our default for labs
     messages=[
         {"role": "user",
          "content": "In one sentence: what makes an AI system 'agentic'?"}

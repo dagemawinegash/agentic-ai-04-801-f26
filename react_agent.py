@@ -2,6 +2,7 @@
 # Core idea: make the agent's thinking visible as text:
 #   Thought -> Action -> Observation -> Thought -> ... -> Final Answer
 # Reference: Yao et al. (2023), ReAct, ICLR. arXiv:2210.03629
+# Revised 27 Sep 2026: Action-first parsing (Autopsy 8) and a source label on the tool (Autopsy 7).
 
 import json
 import os
@@ -24,7 +25,11 @@ def get_weather(latitude, longitude, start, end):
               "start": start, "end": end, "format": "JSON"}
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
-    return json.dumps(r.json()["properties"]["parameter"])
+    body = r.json()
+    # The label travels into the model's context: POWER serves provisional GEOS-IT
+    # values near real time and replaces them with MERRA-2 weeks later.
+    return (json.dumps(body["properties"]["parameter"])
+            + f"\n[source: NASA POWER, {'/'.join(body['header']['sources'])}]")
 
 SYSTEM = """You solve tasks step by step. You have one tool:
 
@@ -52,7 +57,7 @@ messages = [{"role": "system", "content": SYSTEM},
 
 for step in range(6):                              # hard stop: no infinite loops
     response = client.chat.completions.create(
-        model="deepseek/deepseek-chat",
+        model="deepseek/deepseek-chat-v3-0324",
         messages=messages,
         stop=["Observation:"],                     # the model must not dream one up
     )
@@ -60,17 +65,21 @@ for step in range(6):                              # hard stop: no infinite loop
     print(text.strip(), "\n")
     messages.append({"role": "assistant", "content": text})
 
-    if "Final Answer:" in text:
-        break
-
     match = re.search(
         r'Action:\s*get_weather\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,'
         r'\s*"?(\d{8})"?\s*,\s*"?(\d{8})"?\s*\)', text)
-    if not match:
-        print("!! Could not parse an Action. This is the lesson.")
+
+    if match:                                      # an Action wins over anything after it
+        text = text[:match.end()]                  # the model wrote more? The code decides what counts
+        messages[-1] = {"role": "assistant", "content": text}
+        lat, lon, start, end = match.groups()
+        obs = get_weather(float(lat), float(lon), start, end)
+        print(f"Observation: {obs[:120]}...\n")
+        messages.append({"role": "user", "content": f"Observation: {obs}"})
+        continue
+
+    if "Final Answer:" in text:                    # only a message without an Action may answer
         break
 
-    lat, lon, start, end = match.groups()
-    obs = get_weather(float(lat), float(lon), start, end)
-    print(f"Observation: {obs[:120]}...\n")
-    messages.append({"role": "user", "content": f"Observation: {obs}"})
+    print("!! Could not parse an Action. This is the lesson.")
+    break
