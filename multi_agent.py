@@ -88,6 +88,10 @@ analysis_agent = create_agent(
         "MISSING DATA refers to measurements that were not collected, "
         "not to agronomic reference values; use standard agronomic knowledge "
         "for thresholds and state it as such. "
+        "Every finding ends with the source label(s) of the facts it rests "
+        "on, copied verbatim from the fact sheet in square brackets; a "
+        "threshold from your own knowledge is labelled [standard agronomic "
+        "knowledge]. A finding without a source label is incomplete. "
         "IMPORTANT: your final message must restate ALL findings in full; "
         "partial output in earlier messages does not count. "
         "No prose report, no recommendations beyond the findings."),
@@ -100,14 +104,21 @@ REPORT_SYSTEM = (
     "Five sentences maximum, plain language. Use ONLY the findings you are "
     "given: never introduce numbers or claims that are not in them. State "
     "data sources and uncertainty in the final sentence."
-    "Name every data source exactly as it appears in the findings "
-    "(for example NASA POWER, iSDAsoil); never describe a source in your own words.")
+    "The final sentence lists every source label that appears in the "
+    "findings, word for word, and states the uncertainty.")
 
 # ---- The pipeline: plain function composition -------------------------------
 
-def run(agent, prompt: str) -> str:
-    result = agent.invoke({"messages": [{"role": "user", "content": prompt}]})
-    return result["messages"][-1].content
+def run(agent, prompt: str, retries: int = 1) -> str:
+    """Run one stage. An empty final message is a failed stage, not an input:
+    retry once, then fail loudly (Autopsy 3 taught us never to concatenate)."""
+    for attempt in range(retries + 1):
+        result = agent.invoke({"messages": [{"role": "user", "content": prompt}]})
+        content = result["messages"][-1].content
+        if isinstance(content, str) and content.strip():
+            return content
+        print(f"[pipeline] stage returned an empty final message (attempt {attempt + 1})")
+    raise RuntimeError("Stage produced no output after retry. An honest stop beats an empty handoff.")
 
 TASK = ("Location: lat -1.94, lon 30.06 near Kigali. "
         "Period: 20260701 to 20260707. "
