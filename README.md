@@ -6,29 +6,30 @@ This repo contains the reference implementations for every lab from Week 0 throu
 
 ## Quick start (Windows, PowerShell)
 
-The course is validated on Windows 11. macOS and Linux notes will follow.
+The course is validated on Windows 11 with Python 3.14. The full walkthrough, including short macOS and Linux notes, is the Week 0 chapter of the lab script: [lab/week0.md](lab/week0.md). The short version:
 
 ```powershell
-git clone <REPO-URL>
+git clone https://github.com/devohp/agentic-ai-04-801-f26.git
 cd agentic-ai-04-801-f26
-py -3.14 -m venv .venv
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-# Now edit .env and add your own keys (see below), then:
+# Now put your course-issued key into .env (see lab/week0.md), then:
 python hello_llm.py
+python check_setup.py
 ```
 
-If `hello_llm.py` prints a model response, your stack works. If not, see the troubleshooting table in the Week 0 chapter of the lab script before asking anyone. That table exists because we hit every one of those errors ourselves.
+If `hello_llm.py` prints a model response and `check_setup.py` prints PASS on every line, your stack works. If not, see the troubleshooting table in the Week 0 chapter before asking anyone. That table exists because we hit every one of those errors ourselves.
 
 **Cursor and VS Code users, one critical check:** make sure the Python interpreter is set to `.venv`, not your global Python. A script that "happens to work" on the wrong interpreter is a time bomb. This is documented in the lab script for a reason: it happened to your instructor.
 
 ## Credentials
 
-Two services, both free:
+Two services, both free for you:
 
-1. **OpenRouter** (LLM access): create a key at `https://openrouter.ai/keys` and set a spending limit on it. A few dollars covers the whole course; a single pipeline run costs a fraction of a cent.
-2. **iSDAsoil** (soil data): register at `https://isda-africa.com/api/registration` and read the Terms of Use. Data is CC-BY 4.0. The API uses a Bearer token that expires after 60 minutes, which is not an inconvenience but a Week 3 learning objective.
+1. **OpenRouter** (LLM access): model access is funded by the course. Your personal key arrives by e-mail and carries a credit limit; do not create an account of your own. A single pipeline run costs a fraction of a cent.
+2. **iSDAsoil** (soil data, from Week 3): register at `https://isda-africa.com/api/registration` and read the Terms of Use. Data is CC-BY 4.0. The API uses a Bearer token that expires after 60 minutes, which is not an inconvenience but a Week 3 learning objective.
 
 Both go into `.env`, which is gitignored. Keys never appear in code, in commits, in screenshots, or in chat messages. The Week 0 lab includes a Leak Drill so that this reflex is trained, not just stated.
 
@@ -37,17 +38,21 @@ Both go into `.env`, which is gitignored. Keys never appear in code, in commits,
 | Week | File(s) | What it teaches |
 |---|---|---|
 | 0 | `hello_llm.py` | Environment smoke test: venv, `.env`, OpenRouter |
+| 0 | `check_setup.py` | Nine setup checks, one PASS or FAIL line each |
 | 1 | `first_agent.py` | Your first tool-using agent, raw SDK loop, NASA POWER |
 | 2 | `react_agent.py` | ReAct from scratch: stop tokens, parsing, budget guard |
+| 2 | `react_verdict.py` | ReAct over two tools, ending in a validated JSON verdict |
 | 3 | `soil_tool.py` | Anatomy of a robust tool: auth, timeouts, snapshot fallback |
 | 3 | `langchain_agent.py` | Same tools, framework loop: what changes and what must not |
 | 3 | `field_notes_tool.py` | Retrieval is just another tool (Chroma, in-memory) |
 | 4 | `multi_agent.py` | Data, Analysis, Report: role separation enforced by tool access |
 | 5 | `eval_harness.py` | Three-layer evals: hard checks, repetition, LLM-as-judge |
 | Capstone | `tools.py` | The four course tools, consolidated: `weather`, `soil`, `calc`, `search_notes` |
+| Data | `weather_snapshot.json` | Frozen weather reference values (see below) |
 | Utility | `build_snapshot.py` | Instructor tool that pre-warms the offline soil snapshot |
+| All | `lab/` | The lab script, one chapter per week |
 
-The scripts are laid out flat, not in week folders, so that they match the lab script line by line and can import each other (`multi_agent.py` and `eval_harness.py` reuse `soil_tool.py`). The authoritative walkthrough for every file is the lab script handed out in class.
+The scripts are laid out flat, not in week folders, so that they match the lab script line by line and can import each other (`multi_agent.py` and `eval_harness.py` reuse `soil_tool.py`). The authoritative walkthrough for every file is the lab script in [lab/](lab/).
 
 ## The snapshot fallback
 
