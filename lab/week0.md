@@ -69,7 +69,7 @@ Set-Content -Path .env -Value 'OPENROUTER_API_KEY=sk-or-v1-YOUR-KEY' -Encoding a
 Get-Content .env
 ```
 
-(The `Set-Content` line overwrites the template content with your real key line; the iSDAsoil lines return in Week 3.)
+Replace `sk-or-v1-YOUR-KEY` with your own key before you press Enter: `Set-Content` writes exactly what stands between the quotes. It overwrites the template content with your real key line; the iSDAsoil lines return in Week 3.
 
 The check must show exactly one line, no quotes, no spaces around the equals sign. Run `Get-Content .env` only now, alone at your desk, and never on a shared screen.
 
@@ -157,10 +157,30 @@ Real output (instructor demo key, 18 Oct 2026, after one run of `hello_llm.py` a
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `401 Unauthorized` | Key mistyped, or `.env` not in the working directory | Re-copy the key; run the script from the folder that contains `.env` |
-| `KeyError: OPENROUTER_API_KEY` | `.env` misnamed (`.env.txt`) or BOM problem | See the two traps above |
+| `401`, usually with `User not found` | Python sends something other than your issued key: the placeholder `YOUR-KEY` is still in `.env`, the key was cut short when copied, or an older `OPENROUTER_API_KEY` on your system wins over `.env` | Run the key check below the table |
+| `KeyError: OPENROUTER_API_KEY` | `.env` missing or misnamed (`.env.txt`), or BOM problem | See the two traps above |
 | `Activate.ps1` blocked | PowerShell execution policy | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, new terminal |
 | Timeouts, TLS errors | Campus proxy or unstable connection | Try a different network; ask the TAs; Session 1B has an Environment Clinic |
+
+**The key check, for any `401`.** OpenRouter answers `User not found` for every key it cannot match, so the message does not tell you which cause you have. This line does. Run it in the repository folder with the venv active. It prints what Python actually sends and shows only seven characters of the key itself, so it is safe on a shared screen:
+
+```powershell
+python -c "import os; from dotenv import load_dotenv; print('already set:', 'OPENROUTER_API_KEY' in os.environ); load_dotenv(); k=os.environ['OPENROUTER_API_KEY']; print(len(k), k[:12], '...', k[-4:])"
+```
+
+- **`sk-or-v1-YOU ... -KEY`:** the placeholder is still there. Write `.env` again, this time with your own key.
+- **Length or last four characters differ from the key in your e-mail:** the key was cut short. Copy it again with the copy button.
+- **`already set: True`, and the last four characters are not those of your key:** a variable from an earlier project wins, because `load_dotenv()` never overwrites a variable that already exists. This case has a signature: `check_setup.py` reads `.env` directly and says PASS for the key, while `hello_llm.py` still gets `401`. Remove the old variable, then open a new terminal (in Cursor or VS Code, restart the editor itself: its terminals inherit the environment the editor started with):
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENROUTER_API_KEY", $null, "User")
+```
+
+If a new terminal still says `already set: True`, the variable is set for the whole machine; tell the TAs. The same mechanism applies to every script in this course, since all of them read `.env` the same way.
+
+> **macOS or Linux:** use `python3` for the check. An old variable usually sits in an `export OPENROUTER_API_KEY=...` line in `~/.zshrc` or `~/.bashrc`; delete that line, then open a new terminal.
+
+Still stuck? Send the TAs the output of the check. It is safe to share; the key itself is not.
 
 ---
 
