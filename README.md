@@ -1,3 +1,4 @@
+<p align="center"><img src="assets/logo.svg" alt="Agentic AI: Foundations and Applications" width="640"></p>
 # Agentic AI: Foundations and Applications (04-801)
 
 Course repository for the Fall 2026 Mini-2 at Carnegie Mellon University Africa, Kigali. Instructor: Prof. Dr. Bernhard Ostheimer.

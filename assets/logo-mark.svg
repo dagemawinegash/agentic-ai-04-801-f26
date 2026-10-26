@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Agentic AI 04-801 mark">
+<title>Agentic AI 04-801</title>
+<g transform="translate(0,0) scale(1)">
+<path d="M139 32.45 A78 78 0 1 1 61 32.45" fill="none" stroke="#D9A21B" stroke-width="13"/>
+<path d="M75 24.5 L54.5 21.5 L67.5 42.5 Z" fill="#D9A21B"/>
+<circle cx="178" cy="100" r="9" fill="#FFFFFF" stroke="#13201A" stroke-width="5"/>
+<circle cx="100" cy="178" r="9" fill="#FFFFFF" stroke="#13201A" stroke-width="5"/>
+<circle cx="22" cy="100" r="9" fill="#FFFFFF" stroke="#13201A" stroke-width="5"/>
+<line x1="76" y1="150" x2="124" y2="150" stroke="#13201A" stroke-width="6" stroke-linecap="round"/>
+<line x1="100" y1="148" x2="100" y2="94" stroke="#1E6B45" stroke-width="8" stroke-linecap="round"/>
+<path d="M100 120 C 84 120 70 112 64 94 C 82 92 96 102 100 120 Z" fill="#1E6B45"/>
+<path d="M100 104 C 104 84 120 70 142 68 C 142 90 124 104 100 104 Z" fill="#1E6B45"/>
+<circle cx="100" cy="82" r="8" fill="#D9A21B"/>
+</g>
+</svg>
